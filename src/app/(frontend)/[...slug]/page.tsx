@@ -4,22 +4,31 @@ import React from 'react'
 import config from '@/payload.config'
 import { StorefrontLayout } from '@/components/StorefrontLayout'
 import { RichText } from '@/components/RichText'
-import './storefront.css'
+import '../storefront.css'
 import { Page } from '@/payload-types'
 
-export default async function HomePage() {
+interface PageProps {
+  params: {
+    slug?: string[]
+  }
+}
+
+export default async function DynamicPage({ params }: PageProps) {
   const payloadConfig = await config
   const payload = await getPayload({ config: payloadConfig })
   
+  // Convert slug array to string path
+  const slugPath = params.slug ? `/${params.slug.join('/')}` : '/'
+  
   try {
-    // Find the homepage (slug = "/")
+    // Find the page by slug
     const pages = await payload.find({
       collection: 'pages',
       where: {
         and: [
           {
             slug: {
-              equals: '/',
+              equals: slugPath,
             },
           },
           {
@@ -33,24 +42,7 @@ export default async function HomePage() {
     })
 
     if (!pages.docs || pages.docs.length === 0) {
-      // No homepage created yet, show default welcome message
-      return (
-        <StorefrontLayout>
-          <div className="page-content">
-            <h1 className="page-title">Welcome to Chrono Sushi</h1>
-            <div className="page-body">
-              <p>Your storefront is ready! To get started:</p>
-              <ol>
-                <li>Go to the <a href="/admin" target="_blank" rel="noopener noreferrer">admin panel</a></li>
-                <li>Create a new page in the "Pages" collection</li>
-                <li>Set the slug to "/" to make it your homepage</li>
-                <li>Add your content and publish the page</li>
-              </ol>
-              <p>You can also create other pages like "/about" or "/store" to build out your site.</p>
-            </div>
-          </div>
-        </StorefrontLayout>
-      )
+      notFound()
     }
 
     const page = pages.docs[0]
@@ -58,23 +50,23 @@ export default async function HomePage() {
     return (
       <StorefrontLayout>
         <div className="page-content">
-          <h1 className="page-title">{page.title}</h1>
-          <div className="page-body">
-            {page.content && <RichText data={page.content} />}
-          </div>
+          <h1>{page.title}</h1>
+          {page.content && <RichText data={page.content} />}
         </div>
       </StorefrontLayout>
     )
   } catch (error) {
-    console.error('Error fetching homepage:', error)
+    console.error('Error fetching page:', error)
     notFound()
   }
 }
 
 // Generate metadata for SEO
-export async function generateMetadata() {
+export async function generateMetadata({ params }: PageProps) {
   const payloadConfig = await config
   const payload = await getPayload({ config: payloadConfig })
+  
+  const slugPath = params.slug ? `/${params.slug.join('/')}` : '/'
   
   try {
     const pages = await payload.find({
@@ -83,7 +75,7 @@ export async function generateMetadata() {
         and: [
           {
             slug: {
-              equals: '/',
+              equals: slugPath,
             },
           },
           {
@@ -98,8 +90,8 @@ export async function generateMetadata() {
 
     if (!pages.docs || pages.docs.length === 0) {
       return {
-        title: 'Chrono Sushi - Fresh Sushi Delivered',
-        description: 'Fresh sushi delivered with precision timing.',
+        title: '404 - Page Not Found',
+        description: 'The requested page could not be found.',
       }
     }
 
